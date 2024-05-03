@@ -1,42 +1,34 @@
+import { Formik, Form, Field, ErrorMessage } from "formik";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import OAuth from "../components/OAuth";
 
 export default function SignUp() {
-  const [formData, setFormData] = useState({});
   const [errorMessage, setErrorMessage] = useState(null);
-
   const navigate = useNavigate();
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
-  };
-  console.log(formData);
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.username || !formData.email || !formData.password) {
-      return setErrorMessage("please fill out all fields");
-    }
 
+  const handleSubmit = async (values, { setSubmitting }) => {
     try {
       setErrorMessage(null);
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(values),
       });
 
       const data = await res.json();
-      if (data.success == false) {
-        return setErrorMessage(data.message);
-      }
-
-      if (res.ok) {
-        return navigate("/sign-in");
+      if (!res.ok) {
+        setErrorMessage(data.message);
+      } else {
+        navigate("/sign-in");
       }
     } catch (err) {
       setErrorMessage(err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
+
   return (
     <div
       className="d-flex justify-content-center align-items-center vh-100"
@@ -45,96 +37,109 @@ export default function SignUp() {
         color: "#FFFFFF",
       }}
     >
-      {/* formik should be applied here */}
       <div style={{ width: "80%", maxWidth: "500px" }}>
         <h2 className="text-center" style={{ fontSize: "27px" }}>
           Sign Up
         </h2>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group mb-2">
-            <label style={{ marginBottom: "5px", fontSize: "17px" }}>
-              Username
-            </label>
-            <input
-              type="text"
-              className="form-control"
-              id="username"
-              placeholder="Username"
-              style={{
-                fontSize: "20px",
-                height: "30px",
-                padding: "10px 20px",
-                width: "100%",
-                borderRadius: "5px",
-              }}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group mb-2">
-            <label style={{ marginBottom: "5px", fontSize: "17px" }}>
-              Email address
-            </label>
-            <input
-              type="email"
-              id="email"
-              className="form-control"
-              placeholder="Email"
-              style={{
-                fontSize: "20px",
-                height: "30px",
-                padding: "10px 20px",
-                width: "100%",
-                borderRadius: "5px",
-              }}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group mb-4">
-            <label style={{ marginBottom: "5px", fontSize: "17px" }}>
-              Password
-            </label>
-            <input
-              type="password"
-              className="form-control"
-              id="password"
-              placeholder="Password"
-              style={{
-                fontSize: "20px",
-                height: "30px",
-                padding: "10px 20px",
-                width: "100%",
-                borderRadius: "5px",
-              }}
-              onChange={handleChange}
-            />
-          </div>
-          <div style={{ display: "grid", flexWrap: "nowrap", gap: "5px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: "20px",
-              }}
-            >
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{
-                  fontSize: "1.2rem",
-
-                  backgroundColor: "#007BFF",
-                  borderRadius: "10px",
-                  width: "100%",
-                  background: "linear-gradient(45deg, crimson, yellow)",
-                  color: "#FFFFFF",
-                }}
-              >
-                Sign Up
-              </button>
-            </div>
-            <OAuth />
-          </div>
-        </form>
+        <Formik
+          initialValues={{ username: "", email: "", password: "" }}
+          validate={(values) => {
+            const errors = {};
+            if (!values.username) {
+              errors.username = "Required";
+            }
+            if (!values.email) {
+              errors.email = "Required";
+            }
+            if (!values.password) {
+              errors.password = "Required";
+            }
+            return errors;
+          }}
+          onSubmit={handleSubmit}
+        >
+          {({ isSubmitting }) => (
+            <Form>
+              <div className="form-group mb-2">
+                <label htmlFor="username">Username</label>
+                <Field
+                  type="text"
+                  id="username"
+                  name="username"
+                  className="form-control"
+                  placeholder="Username"
+                />
+                <ErrorMessage
+                  name="username"
+                  component="div"
+                  className="text-danger"
+                />
+              </div>
+              <div className="form-group mb-2">
+                <label htmlFor="email">Email address</label>
+                <Field
+                  type="email"
+                  id="email"
+                  name="email"
+                  className="form-control"
+                  placeholder="Email"
+                />
+                <ErrorMessage
+                  name="email"
+                  component="div"
+                  className="text-danger"
+                />
+              </div>
+              <div className="form-group mb-4">
+                <label htmlFor="password">Password</label>
+                <Field
+                  type="password"
+                  id="password"
+                  name="password"
+                  className="form-control"
+                  placeholder="Password"
+                />
+                <ErrorMessage
+                  name="password"
+                  component="div"
+                  className="text-danger"
+                />
+              </div>
+              <div style={{ display: "grid", flexWrap: "nowrap", gap: "5px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: "20px",
+                  }}
+                >
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{
+                      fontSize: "1.2rem",
+                      backgroundColor: "#007BFF",
+                      borderRadius: "10px",
+                      width: "100%",
+                      background: "linear-gradient(45deg, crimson, yellow)",
+                      color: "#FFFFFF",
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <div className="spinner-border" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                    ) : (
+                      "Sign Up"
+                    )}
+                  </button>
+                </div>
+                <OAuth />
+              </div>
+            </Form>
+          )}
+        </Formik>
         <div className="flex mt-2">
           <span>Have an account? </span>
           <Link
@@ -159,7 +164,7 @@ export default function SignUp() {
             justifyContent: "center",
           }}
         >
-          {errorMessage && <alert>{errorMessage}</alert>}
+          {errorMessage && <div className="alert">{errorMessage}</div>}
         </div>
       </div>
     </div>

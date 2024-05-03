@@ -1,3 +1,4 @@
+import { Formik, Form, Field, ErrorMessage } from "formik";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -7,42 +8,35 @@ import {
 } from "../redux/user/userSlice";
 import { useDispatch, useSelector } from "react-redux";
 import OAuth from "../components/OAuth";
+
 export default function SignUp() {
-  const [formData, setFormData] = useState({});
   const { loading, error: errorMessage } = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
-  };
-  console.log(formData);
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.email || !formData.password) {
-      return dispatch(signInFailure("please fill out all fields"));
-    }
 
+  const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      dispatch(signInStart);
+      dispatch(signInStart());
       const res = await fetch("/api/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(values),
       });
 
       const data = await res.json();
-      if (data.success == false) {
+      if (!res.ok) {
         dispatch(signInFailure(data.message));
-      }
-
-      if (res.ok) {
+      } else {
         dispatch(signInSuccess(data));
-        return navigate("/");
+        navigate("/");
       }
     } catch (err) {
       dispatch(signInFailure(err.message));
+    } finally {
+      setSubmitting(false);
     }
   };
+
   return (
     <div
       className="d-flex justify-content-center align-items-center vh-100"
@@ -51,84 +45,91 @@ export default function SignUp() {
         color: "#FFFFFF",
       }}
     >
-      {/* formik should be applied here */}
       <div style={{ width: "80%", maxWidth: "500px" }}>
         <h2 className="text-center" style={{ fontSize: "30px" }}>
           Sign In
         </h2>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group mb-2">
-            <label style={{ marginBottom: "5px", fontSize: "17px" }}>
-              Email address
-            </label>
-            <input
-              type="email"
-              id="email"
-              className="form-control"
-              placeholder="Email"
-              style={{
-                fontSize: "20px",
-                height: "30px",
-                padding: "10px 20px",
-                width: "100%",
-                borderRadius: "5px",
-              }}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group mb-4">
-            <label style={{ marginBottom: "5px", fontSize: "17px" }}>
-              Password
-            </label>
-            <input
-              type="password"
-              className="form-control"
-              id="password"
-              placeholder="Password"
-              style={{
-                fontSize: "20px",
-                height: "30px",
-                padding: "10px 20px",
-                width: "100%",
-                borderRadius: "5px",
-              }}
-              onChange={handleChange}
-            />
-          </div>
-          <div style={{ display: "grid", flexWrap: "nowrap", gap: "10px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: "20px",
-              }}
-            >
-              <button
-                type="submit"
-                className="btn "
-                style={{
-                  fontSize: "1.2rem",
-
-                  backgroundColor: "#007BFF",
-                  borderRadius: "10px",
-                  width: "100%",
-                  background: "linear-gradient(45deg, crimson, yellow)",
-                  color: "#FFFFFF",
-                }}
-              >
-                {loading ? (
-                  <div className="spinner-border" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
-                ) : (
-                  "Sign In"
-                )}
-              </button>
-            </div>
-
-            <OAuth />
-          </div>
-        </form>
+        <Formik
+          initialValues={{ email: "", password: "" }}
+          validate={(values) => {
+            const errors = {};
+            if (!values.email) {
+              errors.email = "Required";
+            }
+            if (!values.password) {
+              errors.password = "Required";
+            }
+            return errors;
+          }}
+          onSubmit={handleSubmit}
+        >
+          {({ isSubmitting }) => (
+            <Form>
+              <div className="form-group mb-2">
+                <label htmlFor="email">Email address</label>
+                <Field
+                  type="email"
+                  id="email"
+                  name="email"
+                  className="form-control"
+                  placeholder="Email"
+                />
+                <ErrorMessage
+                  name="email"
+                  component="div"
+                  className="text-danger"
+                />
+              </div>
+              <div className="form-group mb-4">
+                <label htmlFor="password">Password</label>
+                <Field
+                  type="password"
+                  id="password"
+                  name="password"
+                  className="form-control"
+                  placeholder="Password"
+                />
+                <ErrorMessage
+                  name="password"
+                  component="div"
+                  className="text-danger"
+                />
+              </div>
+              <div style={{ display: "grid", flexWrap: "nowrap", gap: "10px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: "20px",
+                  }}
+                >
+                  <button
+                    type="submit"
+                    className="btn"
+                    style={{
+                      fontSize: "1.2rem",
+                      backgroundColor: "#007BFF",
+                      borderRadius: "10px",
+                      width: "100%",
+                      background: "linear-gradient(45deg, crimson, yellow)",
+                      color: "#FFFFFF",
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <div className="spinner-border" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </button>
+                </div>
+                <OAuth />
+              </div>
+            </Form>
+          )}
+        </Formik>
         <div className="flex mt-2">
           <span>Don't Have an account? </span>
           <Link
@@ -153,7 +154,7 @@ export default function SignUp() {
             justifyContent: "center",
           }}
         >
-          {errorMessage && <alert>{errorMessage}</alert>}
+          {errorMessage && <div className="alert">{errorMessage}</div>}
         </div>
       </div>
     </div>
